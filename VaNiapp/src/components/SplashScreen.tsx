@@ -1,13 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Typography, Spacing } from '../constants/theme';
 
@@ -17,44 +9,81 @@ interface Props {
 
 export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
   const { colors } = useTheme();
-  const logoScale = useSharedValue(0);
-  const logoRotate = useSharedValue(-15);
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(20);
-  const taglineOpacity = useSharedValue(0);
+  const logoScale = useRef(new Animated.Value(0)).current;
+  const logoRotate = useRef(new Animated.Value(-15)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    logoScale.value = withSpring(1, { damping: 12, stiffness: 100 });
-    logoRotate.value = withSpring(0, { damping: 12 });
-    titleOpacity.value = withDelay(400, withTiming(1, { duration: 500 }));
-    titleTranslateY.value = withDelay(400, withSpring(0, { damping: 14 }));
-    taglineOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
+    // Logo spring in
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue: 1,
+        damping: 12,
+        stiffness: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoRotate, {
+        toValue: 0,
+        damping: 12,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-    const timer = setTimeout(() => {
-      runOnJS(onFinish)();
-    }, 2500);
-    return () => clearTimeout(timer);
+    // Title fade in after 400ms
+    const titleTimer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(titleTranslateY, {
+          toValue: 0,
+          damping: 14,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 400);
+
+    // Tagline fade in after 800ms
+    const taglineTimer = setTimeout(() => {
+      Animated.timing(taglineOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }, 800);
+
+    // Finish after 2500ms
+    const finishTimer = setTimeout(onFinish, 2500);
+
+    return () => {
+      clearTimeout(titleTimer);
+      clearTimeout(taglineTimer);
+      clearTimeout(finishTimer);
+    };
   }, []);
 
-  const logoStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: logoScale.value },
-      { rotate: `${logoRotate.value}deg` },
-    ],
-  }));
-
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
-  }));
-
-  const taglineStyle = useAnimatedStyle(() => ({
-    opacity: taglineOpacity.value,
-  }));
+  const logoRotateInterpolated = logoRotate.interpolate({
+    inputRange: [-15, 0],
+    outputRange: ['-15deg', '0deg'],
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View style={[styles.logoContainer, logoStyle]}>
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            transform: [
+              { scale: logoScale },
+              { rotate: logoRotateInterpolated },
+            ],
+          },
+        ]}
+      >
         <View style={[styles.logoBg, { backgroundColor: colors.primaryLight }]}>
           <Text style={styles.logoEmoji}>{'\uD83D\uDCD6'}</Text>
           <View style={styles.sparkle}>
@@ -63,13 +92,13 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
         </View>
       </Animated.View>
 
-      <Animated.View style={titleStyle}>
+      <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }}>
         <Text style={[Typography.display, { color: colors.text, textAlign: 'center' }]}>
           VaNi
         </Text>
       </Animated.View>
 
-      <Animated.View style={taglineStyle}>
+      <Animated.View style={{ opacity: taglineOpacity }}>
         <Text
           style={[
             Typography.hand,

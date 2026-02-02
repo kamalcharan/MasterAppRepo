@@ -1,15 +1,8 @@
-import React from 'react';
-import { Text, StyleSheet, Pressable, ViewStyle, TextStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { Text, StyleSheet, Pressable, ViewStyle, TextStyle, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { Typography, BorderRadius, Spacing, Shadows } from '../../constants/theme';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Props {
   title: string;
@@ -29,18 +22,23 @@ export const PuffyButton: React.FC<Props> = ({
   style,
 }) => {
   const { colors, mode } = useTheme();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15 });
+    Animated.spring(scale, {
+      toValue: 0.95,
+      damping: 15,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+    Animated.spring(scale, {
+      toValue: 1,
+      damping: 10,
+      stiffness: 200,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePress = () => {
@@ -63,27 +61,28 @@ export const PuffyButton: React.FC<Props> = ({
   const shadow = variant !== 'ghost' ? (mode === 'dark' ? Shadows.puffyDark : Shadows.puffy) : {};
 
   return (
-    <AnimatedPressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      style={[
-        styles.button,
-        shadow,
-        {
-          backgroundColor: bgColor,
-          opacity: disabled ? 0.5 : 1,
-          borderWidth: variant === 'ghost' ? 1 : 0,
-          borderColor: variant === 'ghost' ? colors.surfaceBorder : undefined,
-        },
-        style,
-        animatedStyle,
-      ]}
-    >
-      {icon && <Text style={styles.icon}>{icon}</Text>}
-      <Text style={[Typography.button, { color: textColor } as TextStyle]}>{title}</Text>
-    </AnimatedPressable>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        style={[
+          styles.button,
+          shadow,
+          {
+            backgroundColor: bgColor,
+            opacity: disabled ? 0.5 : 1,
+            borderWidth: variant === 'ghost' ? 1 : 0,
+            borderColor: variant === 'ghost' ? colors.surfaceBorder : undefined,
+          },
+          style,
+        ]}
+      >
+        {icon && <Text style={styles.icon}>{icon}</Text>}
+        <Text style={[Typography.button, { color: textColor } as TextStyle]}>{title}</Text>
+      </Pressable>
+    </Animated.View>
   );
 };
 

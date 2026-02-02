@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DotGridBackground } from '../../src/components/ui/DotGridBackground';
@@ -9,6 +9,8 @@ import { PuffyButton } from '../../src/components/ui/PuffyButton';
 import { HandwrittenText } from '../../src/components/ui/HandwrittenText';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Typography, Spacing } from '../../src/constants/theme';
+
+const logo = require('../../assets/logo.png');
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
@@ -23,9 +25,7 @@ export default function WelcomeScreen() {
         </View>
 
         <View style={styles.hero}>
-          <View style={[styles.logoBg, { backgroundColor: colors.primaryLight }]}>
-            <Text style={styles.logoEmoji}>{'\uD83D\uDCD6'}</Text>
-          </View>
+          <Image source={logo} style={styles.logoImage} resizeMode="contain" />
           <Text style={[Typography.display, { color: colors.text }]}>
             VaNi
           </Text>
@@ -97,15 +97,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  logoBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoEmoji: {
-    fontSize: 48,
+  logoImage: {
+    width: 140,
+    height: 140,
   },
   features: {
     gap: Spacing.xl,

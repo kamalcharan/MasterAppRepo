@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Typography, Spacing } from '../constants/theme';
+
+const logo = require('../../assets/logo.png');
 
 interface Props {
   onFinish: () => void;
@@ -84,12 +86,7 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
           },
         ]}
       >
-        <View style={[styles.logoBg, { backgroundColor: colors.primaryLight }]}>
-          <Text style={styles.logoEmoji}>{'\uD83D\uDCD6'}</Text>
-          <View style={styles.sparkle}>
-            <Text style={styles.sparkleEmoji}>{'\u2728'}</Text>
-          </View>
-        </View>
+        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
       </Animated.View>
 
       <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }}>
@@ -122,22 +119,8 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: Spacing.lg,
   },
-  logoBg: {
-    width: 120,
-    height: 120,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoEmoji: {
-    fontSize: 56,
-  },
-  sparkle: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-  },
-  sparkleEmoji: {
-    fontSize: 28,
+  logoImage: {
+    width: 180,
+    height: 180,
   },
 });

@@ -28,10 +28,10 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: '1',
-    emoji: '\uD83D\uDCDA',
-    title: 'Practice Like a Pro',
-    subtitle: '320 handpicked questions across Physics, Chemistry, Botany & Zoology. NEET & CUET ready.',
-    doodle: 'no more boring prep \u2728',
+    emoji: '\uD83C\uDFAF',
+    title: 'NEET & CUET Ready',
+    subtitle: 'Built specifically for your exam. Physics, Chemistry, Botany & Zoology — all covered.',
+    doodle: 'your exam, your way \u2728',
   },
   {
     id: '2',

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { UserProfile, ExamType, Language } from '../../types';
+import { UserProfile, ExamType, Language, SubjectId } from '../../types';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -32,6 +32,9 @@ const authSlice = createSlice({
     updateLanguage: (state, action: PayloadAction<Language>) => {
       if (state.user) state.user.language = action.payload;
     },
+    updateSubjects: (state, action: PayloadAction<SubjectId[]>) => {
+      if (state.user) state.user.selectedSubjects = action.payload;
+    },
     incrementQuestionsUsed: (state, action: PayloadAction<number>) => {
       if (state.user) state.user.questionsUsed += action.payload;
     },
@@ -45,6 +48,7 @@ export const {
   setUser,
   updateExam,
   updateLanguage,
+  updateSubjects,
   incrementQuestionsUsed,
   logout,
 } = authSlice.actions;

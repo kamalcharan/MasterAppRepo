@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,17 +18,33 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Typography, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../src/store/slices/authSlice';
-import { ExamType, Language } from '../../src/types';
+import {
+  ExamType,
+  Language,
+  SubjectId,
+  SubjectCategory,
+  CUET_SUBJECTS,
+  CUET_MAX_SUBJECTS,
+  NEET_SUBJECT_IDS,
+} from '../../src/types';
 
-const exams: { id: ExamType; label: string; emoji: string }[] = [
-  { id: 'NEET', label: 'NEET', emoji: '\uD83E\uDE7A' },
-  { id: 'CUET', label: 'CUET', emoji: '\uD83C\uDF93' },
-  { id: 'BOTH', label: 'Both', emoji: '\uD83D\uDCAA' },
+const exams: { id: ExamType; label: string; emoji: string; desc: string }[] = [
+  { id: 'NEET', label: 'NEET', emoji: '\uD83E\uDE7A', desc: '4 subjects (fixed)' },
+  { id: 'CUET', label: 'CUET', emoji: '\uD83C\uDF93', desc: 'Pick up to 6' },
+  { id: 'BOTH', label: 'Both', emoji: '\uD83D\uDCAA', desc: 'NEET + CUET subjects' },
 ];
 
 const languages: { id: Language; label: string; native: string }[] = [
   { id: 'en', label: 'English', native: 'English' },
   { id: 'te', label: 'Telugu', native: '\u0C24\u0C46\u0C32\u0C41\u0C17\u0C41' },
+];
+
+const CATEGORY_ORDER: SubjectCategory[] = [
+  'Science',
+  'Commerce',
+  'Arts / Humanities',
+  'Other',
+  'General Test',
 ];
 
 export default function ProfileSetupScreen() {
@@ -39,8 +55,41 @@ export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [exam, setExam] = useState<ExamType | null>(null);
   const [language, setLanguage] = useState<Language>('en');
+  const [cuetSubjects, setCuetSubjects] = useState<SubjectId[]>([]);
 
-  const canContinue = name.trim().length >= 2 && exam !== null;
+  const needsSubjectPicker = exam === 'CUET' || exam === 'BOTH';
+
+  const groupedSubjects = useMemo(() => {
+    const groups: Record<string, typeof CUET_SUBJECTS> = {};
+    for (const cat of CATEGORY_ORDER) {
+      const items = CUET_SUBJECTS.filter((s) => s.category === cat);
+      if (items.length > 0) groups[cat] = items;
+    }
+    return groups;
+  }, []);
+
+  const toggleCuetSubject = (id: SubjectId) => {
+    setCuetSubjects((prev) => {
+      if (prev.includes(id)) return prev.filter((s) => s !== id);
+      if (prev.length >= CUET_MAX_SUBJECTS) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const getSelectedSubjects = (): SubjectId[] => {
+    if (exam === 'NEET') return [...NEET_SUBJECT_IDS];
+    if (exam === 'CUET') return cuetSubjects;
+    if (exam === 'BOTH') {
+      const combined = new Set<SubjectId>([...NEET_SUBJECT_IDS, ...cuetSubjects]);
+      return Array.from(combined);
+    }
+    return [];
+  };
+
+  const canContinue =
+    name.trim().length >= 2 &&
+    exam !== null &&
+    (!needsSubjectPicker || cuetSubjects.length >= 1);
 
   const handleContinue = () => {
     if (!canContinue || !exam) return;
@@ -52,6 +101,7 @@ export default function ProfileSetupScreen() {
         email: '',
         exam,
         language,
+        selectedSubjects: getSelectedSubjects(),
         trialStartDate: new Date().toISOString(),
         questionsUsed: 0,
         trialQuestionsLimit: 25,
@@ -61,6 +111,14 @@ export default function ProfileSetupScreen() {
 
     router.replace('/(auth)/trial-welcome');
   };
+
+  const selectedColor = (active: boolean) => ({
+    backgroundColor: active ? colors.primary : colors.surface,
+    borderColor: active ? colors.primary : colors.surfaceBorder,
+  });
+
+  const selectedTextColor = (active: boolean) =>
+    active ? (mode === 'dark' ? '#0F172A' : '#FFFFFF') : colors.text;
 
   return (
     <DotGridBackground>
@@ -108,43 +166,122 @@ export default function ProfileSetupScreen() {
                 {exams.map((e) => (
                   <Pressable
                     key={e.id}
-                    onPress={() => setExam(e.id)}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor:
-                          exam === e.id
-                            ? colors.primary
-                            : colors.surface,
-                        borderColor:
-                          exam === e.id
-                            ? colors.primary
-                            : colors.surfaceBorder,
-                      },
-                    ]}
+                    onPress={() => {
+                      setExam(e.id);
+                      if (e.id === 'NEET') setCuetSubjects([]);
+                    }}
+                    style={[styles.examChip, selectedColor(exam === e.id)]}
                   >
                     <Text style={styles.chipEmoji}>{e.emoji}</Text>
-                    <Text
-                      style={[
-                        Typography.body,
-                        {
-                          color: exam === e.id
-                            ? (mode === 'dark' ? '#0F172A' : '#FFFFFF')
-                            : colors.text,
-                          fontFamily: 'PlusJakartaSans_600SemiBold',
-                        },
-                      ]}
-                    >
-                      {e.label}
-                    </Text>
+                    <View>
+                      <Text
+                        style={[
+                          Typography.body,
+                          {
+                            color: selectedTextColor(exam === e.id),
+                            fontFamily: 'PlusJakartaSans_600SemiBold',
+                          },
+                        ]}
+                      >
+                        {e.label}
+                      </Text>
+                      <Text
+                        style={[
+                          Typography.bodySm,
+                          {
+                            color: exam === e.id
+                              ? (mode === 'dark' ? '#334155' : '#DBEAFE')
+                              : colors.textTertiary,
+                          },
+                        ]}
+                      >
+                        {e.desc}
+                      </Text>
+                    </View>
                   </Pressable>
                 ))}
               </View>
             </View>
           </JournalCard>
 
+          {/* CUET Subject Picker */}
+          {needsSubjectPicker && (
+            <JournalCard rotation={-0.2} delay={300}>
+              <View style={styles.section}>
+                <View style={styles.subjectHeader}>
+                  <Text style={[Typography.h3, { color: colors.text }]}>
+                    Pick your CUET subjects
+                  </Text>
+                  <Text
+                    style={[
+                      Typography.bodySm,
+                      {
+                        color: cuetSubjects.length >= CUET_MAX_SUBJECTS
+                          ? colors.warning
+                          : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {cuetSubjects.length}/{CUET_MAX_SUBJECTS} selected
+                  </Text>
+                </View>
+
+                {CATEGORY_ORDER.map((category) => {
+                  const items = groupedSubjects[category];
+                  if (!items) return null;
+                  return (
+                    <View key={category} style={styles.categoryBlock}>
+                      <Text style={[Typography.label, { color: colors.textTertiary }]}>
+                        {category.toUpperCase()}
+                      </Text>
+                      <View style={styles.subjectChips}>
+                        {items.map((subj) => {
+                          const isSelected = cuetSubjects.includes(subj.id);
+                          const isDisabled =
+                            !isSelected && cuetSubjects.length >= CUET_MAX_SUBJECTS;
+                          return (
+                            <Pressable
+                              key={subj.id}
+                              onPress={() => !isDisabled && toggleCuetSubject(subj.id)}
+                              style={[
+                                styles.subjectChip,
+                                selectedColor(isSelected),
+                                isDisabled && { opacity: 0.4 },
+                              ]}
+                            >
+                              <Text style={styles.subjectChipEmoji}>{subj.emoji}</Text>
+                              <Text
+                                style={[
+                                  Typography.bodySm,
+                                  {
+                                    color: selectedTextColor(isSelected),
+                                    fontFamily: 'PlusJakartaSans_600SemiBold',
+                                  },
+                                ]}
+                              >
+                                {subj.name}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {exam === 'BOTH' && (
+                  <StickyNote color="yellow" rotation={0.5}>
+                    <HandwrittenText variant="handSm">
+                      NEET subjects (Physics, Chemistry, Botany, Zoology) are auto-included!
+                    </HandwrittenText>
+                  </StickyNote>
+                )}
+              </View>
+            </JournalCard>
+          )}
+
           {/* Language */}
-          <StickyNote color="teal" rotation={-1} delay={300}>
+          <StickyNote color="teal" rotation={-1} delay={needsSubjectPicker ? 400 : 300}>
             <View style={styles.section}>
               <Text style={[Typography.h3, { color: colors.text }]}>
                 Preferred language?
@@ -154,27 +291,13 @@ export default function ProfileSetupScreen() {
                   <Pressable
                     key={l.id}
                     onPress={() => setLanguage(l.id)}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor:
-                          language === l.id
-                            ? colors.primary
-                            : colors.surface,
-                        borderColor:
-                          language === l.id
-                            ? colors.primary
-                            : colors.surfaceBorder,
-                      },
-                    ]}
+                    style={[styles.chip, selectedColor(language === l.id)]}
                   >
                     <Text
                       style={[
                         Typography.body,
                         {
-                          color: language === l.id
-                            ? (mode === 'dark' ? '#0F172A' : '#FFFFFF')
-                            : colors.text,
+                          color: selectedTextColor(language === l.id),
                           fontFamily: 'PlusJakartaSans_600SemiBold',
                         },
                       ]}
@@ -224,6 +347,11 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.md,
   },
+  subjectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   input: {
     fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 16,
@@ -246,8 +374,39 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
+  examChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    flex: 1,
+    minWidth: '45%' as unknown as number,
+  },
   chipEmoji: {
-    fontSize: 20,
+    fontSize: 24,
+  },
+  categoryBlock: {
+    gap: Spacing.sm,
+  },
+  subjectChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  subjectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+  },
+  subjectChipEmoji: {
+    fontSize: 16,
   },
   actions: {
     alignItems: 'center',

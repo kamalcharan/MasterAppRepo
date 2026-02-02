@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 
 import { DotGridBackground } from '../../src/components/ui/DotGridBackground';
 import { JournalCard } from '../../src/components/ui/JournalCard';
@@ -8,16 +9,22 @@ import { StickyNote } from '../../src/components/ui/StickyNote';
 import { HandwrittenText } from '../../src/components/ui/HandwrittenText';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Typography, Spacing, BorderRadius } from '../../src/constants/theme';
-
-const subjects = [
-  { id: 'physics', name: 'Physics', icon: '\u269B\uFE0F', color: '#3B82F6', chapters: 3 },
-  { id: 'chemistry', name: 'Chemistry', icon: '\u2697\uFE0F', color: '#F97316', chapters: 3 },
-  { id: 'botany', name: 'Botany', icon: '\uD83C\uDF3F', color: '#22C55E', chapters: 3 },
-  { id: 'zoology', name: 'Zoology', icon: '\uD83E\uDD8B', color: '#A855F7', chapters: 3 },
-];
+import { RootState } from '../../src/store';
+import { SUBJECT_META } from '../../src/constants/subjects';
 
 export default function DashboardScreen() {
   const { colors, mode, toggle } = useTheme();
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  const displaySubjects = useMemo(() => {
+    const ids = user?.selectedSubjects ?? ['physics', 'chemistry', 'botany', 'zoology'];
+    return ids.map((id) => ({
+      id,
+      ...(SUBJECT_META[id] ?? { name: id, emoji: '\uD83D\uDCDA', color: '#64748B' }),
+    }));
+  }, [user?.selectedSubjects]);
+
+  const greeting = user?.name ? `Hey, ${user.name}` : 'Study Board';
 
   return (
     <DotGridBackground>
@@ -26,9 +33,11 @@ export default function DashboardScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={[Typography.label, { color: colors.textTertiary }]}>STUDY LOG v1.0</Text>
+              <Text style={[Typography.label, { color: colors.textTertiary }]}>
+                {user?.exam ?? 'NEET'} PREP
+              </Text>
               <Text style={[Typography.h1, { color: colors.text, marginTop: 4 }]}>
-                Study Board
+                {greeting}
               </Text>
             </View>
             <Pressable onPress={toggle} style={styles.themeToggle}>
@@ -46,7 +55,9 @@ export default function DashboardScreen() {
                 <Text style={[Typography.h2, { color: colors.text }]}>3 days left</Text>
               </View>
               <View style={styles.trialBadge}>
-                <Text style={styles.trialBadgeText}>25 Q's</Text>
+                <Text style={styles.trialBadgeText}>
+                  {user?.questionsUsed ?? 0}/{user?.trialQuestionsLimit ?? 25} Q's
+                </Text>
               </View>
             </View>
           </StickyNote>
@@ -57,16 +68,16 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.subjectGrid}>
-            {subjects.map((subject, idx) => (
+            {displaySubjects.map((subject, idx) => (
               <JournalCard key={subject.id} delay={200 + idx * 80} style={styles.subjectCard}>
                 <View style={[styles.subjectIconBg, { backgroundColor: subject.color + '20' }]}>
-                  <Text style={styles.subjectEmoji}>{subject.icon}</Text>
+                  <Text style={styles.subjectEmoji}>{subject.emoji}</Text>
                 </View>
-                <Text style={[Typography.h3, { color: colors.text, marginTop: Spacing.sm }]}>
+                <Text
+                  style={[Typography.h3, { color: colors.text, marginTop: Spacing.sm, textAlign: 'center' }]}
+                  numberOfLines={1}
+                >
                   {subject.name}
-                </Text>
-                <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>
-                  {subject.chapters} chapters
                 </Text>
               </JournalCard>
             ))}

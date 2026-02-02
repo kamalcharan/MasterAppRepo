@@ -2,7 +2,87 @@ export type ThemeMode = 'light' | 'dark';
 export type ExamType = 'NEET' | 'CUET' | 'BOTH';
 export type Language = 'en' | 'te';
 
-export type SubjectId = 'physics' | 'chemistry' | 'botany' | 'zoology';
+// NEET fixed subjects
+export type NeetSubjectId = 'physics' | 'chemistry' | 'botany' | 'zoology';
+
+// All CUET domain subject IDs
+export type CuetSubjectId =
+  // Science
+  | 'physics'
+  | 'chemistry'
+  | 'mathematics'
+  | 'biology'
+  // Commerce
+  | 'accountancy'
+  | 'business-studies'
+  | 'economics'
+  // Arts / Humanities
+  | 'history'
+  | 'geography'
+  | 'political-science'
+  | 'sociology'
+  | 'psychology'
+  | 'philosophy'
+  | 'anthropology'
+  // Other Domain
+  | 'computer-science'
+  | 'environmental-studies'
+  | 'physical-education'
+  | 'fine-arts'
+  | 'home-science'
+  | 'mass-media'
+  // General Test
+  | 'general-test';
+
+export type SubjectId = NeetSubjectId | CuetSubjectId;
+
+export type SubjectCategory =
+  | 'Science'
+  | 'Commerce'
+  | 'Arts / Humanities'
+  | 'Other'
+  | 'General Test';
+
+export interface SubjectOption {
+  id: CuetSubjectId;
+  name: string;
+  emoji: string;
+  category: SubjectCategory;
+}
+
+// Full CUET subject catalog
+export const CUET_SUBJECTS: SubjectOption[] = [
+  // Science
+  { id: 'physics', name: 'Physics', emoji: '\u269B\uFE0F', category: 'Science' },
+  { id: 'chemistry', name: 'Chemistry', emoji: '\uD83E\uDDEA', category: 'Science' },
+  { id: 'mathematics', name: 'Mathematics', emoji: '\uD83D\uDCCF', category: 'Science' },
+  { id: 'biology', name: 'Biology / Biotech', emoji: '\uD83E\uDDEC', category: 'Science' },
+  // Commerce
+  { id: 'accountancy', name: 'Accountancy', emoji: '\uD83D\uDCCA', category: 'Commerce' },
+  { id: 'business-studies', name: 'Business Studies', emoji: '\uD83D\uDCBC', category: 'Commerce' },
+  { id: 'economics', name: 'Economics', emoji: '\uD83D\uDCB9', category: 'Commerce' },
+  // Arts / Humanities
+  { id: 'history', name: 'History', emoji: '\uD83C\uDFDB\uFE0F', category: 'Arts / Humanities' },
+  { id: 'geography', name: 'Geography', emoji: '\uD83C\uDF0D', category: 'Arts / Humanities' },
+  { id: 'political-science', name: 'Political Science', emoji: '\uD83D\uDDF3\uFE0F', category: 'Arts / Humanities' },
+  { id: 'sociology', name: 'Sociology', emoji: '\uD83D\uDC65', category: 'Arts / Humanities' },
+  { id: 'psychology', name: 'Psychology', emoji: '\uD83E\uDDE0', category: 'Arts / Humanities' },
+  { id: 'philosophy', name: 'Philosophy', emoji: '\uD83D\uDCA1', category: 'Arts / Humanities' },
+  { id: 'anthropology', name: 'Anthropology', emoji: '\uD83D\uDD2C', category: 'Arts / Humanities' },
+  // Other Domain
+  { id: 'computer-science', name: 'Computer Science', emoji: '\uD83D\uDCBB', category: 'Other' },
+  { id: 'environmental-studies', name: 'Environmental Studies', emoji: '\uD83C\uDF3F', category: 'Other' },
+  { id: 'physical-education', name: 'Physical Education', emoji: '\uD83C\uDFC3', category: 'Other' },
+  { id: 'fine-arts', name: 'Fine Arts', emoji: '\uD83C\uDFA8', category: 'Other' },
+  { id: 'home-science', name: 'Home Science', emoji: '\uD83C\uDFE0', category: 'Other' },
+  { id: 'mass-media', name: 'Mass Media / Journalism', emoji: '\uD83D\uDCF0', category: 'Other' },
+  // General Test
+  { id: 'general-test', name: 'General Test', emoji: '\uD83D\uDDD2\uFE0F', category: 'General Test' },
+];
+
+export const NEET_SUBJECT_IDS: NeetSubjectId[] = ['physics', 'chemistry', 'botany', 'zoology'];
+
+export const CUET_MAX_SUBJECTS = 6;
 
 export interface Subject {
   id: SubjectId;
@@ -64,6 +144,7 @@ export interface UserProfile {
   email: string;
   exam: ExamType;
   language: Language;
+  selectedSubjects: SubjectId[];
   trialStartDate: string;
   questionsUsed: number;
   trialQuestionsLimit: number;

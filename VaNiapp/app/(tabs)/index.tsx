@@ -47,17 +47,12 @@ export default function DashboardScreen() {
             </Pressable>
           </View>
 
-          {/* Trial Status */}
+          {/* Exam Modes */}
           <StickyNote color="yellow" rotation={-1} delay={100}>
             <View style={styles.trialRow}>
               <View>
-                <HandwrittenText variant="handSm">Trial Active</HandwrittenText>
-                <Text style={[Typography.h2, { color: colors.text }]}>3 days left</Text>
-              </View>
-              <View style={styles.trialBadge}>
-                <Text style={styles.trialBadgeText}>
-                  {user?.questionsUsed ?? 0}/{user?.trialQuestionsLimit ?? 25} Q's
-                </Text>
+                <HandwrittenText variant="handSm">Choose a mode</HandwrittenText>
+                <Text style={[Typography.body, { color: colors.text }]}>Chapter Exam or Practice Exam</Text>
               </View>
             </View>
           </StickyNote>

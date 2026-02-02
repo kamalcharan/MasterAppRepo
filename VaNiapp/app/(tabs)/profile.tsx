@@ -127,14 +127,6 @@ export default function ProfileScreen() {
                 {langLabel}
               </Text>
             </View>
-            <View style={[styles.divider, { backgroundColor: colors.surfaceBorder }]} />
-
-            <View style={styles.infoRow}>
-              <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>Trial</Text>
-              <Text style={[Typography.body, { color: colors.correct, fontFamily: 'PlusJakartaSans_600SemiBold' }]}>
-                Active ({user?.questionsUsed ?? 0}/{user?.trialQuestionsLimit ?? 25} Q's used)
-              </Text>
-            </View>
           </JournalCard>
 
           {/* NEET Subjects */}

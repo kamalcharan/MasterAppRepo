@@ -101,16 +101,37 @@ export interface Chapter {
   timeMinutes: number;
 }
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+export type ExamMode = 'chapter' | 'practice';
+export type NeetSection = 'A' | 'B';
+
+// NEET scoring constants
+export const NEET_SCORING = {
+  correct: 4,
+  wrong: -1,
+  unanswered: 0,
+  maxMarks: 720,           // 180 scored × 4
+  totalQuestions: 200,      // 50 per subject
+  scoredQuestions: 180,     // 45 per subject
+  sectionA: 35,             // per subject, all mandatory
+  sectionB: 15,             // per subject, attempt 10
+  sectionBAttempt: 10,
+  timeLimitMs: 200 * 60 * 1000, // 3hr 20min
+} as const;
+
 export interface Question {
   id: string;
   chapterId: string;
+  subjectId: NeetSubjectId;
   text: string;
   textTe: string;
   options: Option[];
   correctOptionId: string;
   explanation: string;
   explanationTe: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  eliminationTechnique: string;
+  eliminationTechniqueTe: string;
+  difficulty: Difficulty;
 }
 
 export interface Option {
@@ -127,16 +148,32 @@ export interface UserAnswer {
   timeSpentMs: number;
 }
 
-export interface PracticeSession {
+export interface ChapterExamSession {
   id: string;
+  mode: 'chapter';
   chapterId: string;
+  subjectId: NeetSubjectId;
   startedAt: string;
   completedAt: string | null;
   answers: UserAnswer[];
-  score: number | null;
+  totalQuestions: number;
+  correctCount: number | null;
+}
+
+export interface PracticeExamSession {
+  id: string;
+  mode: 'practice';
+  startedAt: string;
+  completedAt: string | null;
+  answers: UserAnswer[];
   totalQuestions: number;
   timeLimitMs: number;
+  score: number | null;
+  maxMarks: number;
+  subjectScores: Record<NeetSubjectId, { correct: number; wrong: number; unanswered: number; score: number }> | null;
 }
+
+export type ExamSession = ChapterExamSession | PracticeExamSession;
 
 export interface UserProfile {
   id: string;
@@ -145,10 +182,6 @@ export interface UserProfile {
   exam: ExamType;
   language: Language;
   selectedSubjects: SubjectId[];
-  trialStartDate: string;
-  questionsUsed: number;
-  trialQuestionsLimit: number;
-  trialDaysLimit: number;
 }
 
 export type AppScreen =

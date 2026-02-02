@@ -55,10 +55,6 @@ export default function ProfileSetupScreen() {
           exam,
           language,
           selectedSubjects: [...NEET_SUBJECT_IDS],
-          trialStartDate: new Date().toISOString(),
-          questionsUsed: 0,
-          trialQuestionsLimit: 25,
-          trialDaysLimit: 3,
         })
       );
       router.replace('/(auth)/trial-welcome');
@@ -72,10 +68,6 @@ export default function ProfileSetupScreen() {
           exam,
           language,
           selectedSubjects: exam === 'BOTH' ? [...NEET_SUBJECT_IDS] : [],
-          trialStartDate: new Date().toISOString(),
-          questionsUsed: 0,
-          trialQuestionsLimit: 25,
-          trialDaysLimit: 3,
         })
       );
       router.push('/(auth)/subject-picker');

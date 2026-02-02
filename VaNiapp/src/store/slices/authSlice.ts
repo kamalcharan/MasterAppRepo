@@ -35,9 +35,6 @@ const authSlice = createSlice({
     updateSubjects: (state, action: PayloadAction<SubjectId[]>) => {
       if (state.user) state.user.selectedSubjects = action.payload;
     },
-    incrementQuestionsUsed: (state, action: PayloadAction<number>) => {
-      if (state.user) state.user.questionsUsed += action.payload;
-    },
     logout: () => initialState,
   },
 });
@@ -49,7 +46,6 @@ export const {
   updateExam,
   updateLanguage,
   updateSubjects,
-  incrementQuestionsUsed,
   logout,
 } = authSlice.actions;
 

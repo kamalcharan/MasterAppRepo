@@ -61,7 +61,7 @@ export interface PracticeSession {
 export interface UserProfile {
   id: string;
   name: string;
-  phone: string;
+  email: string;
   exam: ExamType;
   language: Language;
   trialStartDate: string;

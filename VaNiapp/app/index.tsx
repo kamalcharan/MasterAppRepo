@@ -1,6 +1,15 @@
 import { Redirect } from 'expo-router';
+import { useSelector } from 'react-redux';
+import { RootState } from '../src/store';
 
 export default function Index() {
-  // For R1: always go to auth/welcome. In R2 this will check auth state.
+  const { isAuthenticated, hasCompletedOnboarding } = useSelector(
+    (state: RootState) => state.auth
+  );
+
+  if (isAuthenticated && hasCompletedOnboarding) {
+    return <Redirect href="/(tabs)" />;
+  }
+
   return <Redirect href="/(auth)/welcome" />;
 }

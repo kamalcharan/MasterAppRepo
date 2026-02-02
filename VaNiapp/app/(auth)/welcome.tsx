@@ -70,7 +70,7 @@ export default function WelcomeScreen() {
           <PuffyButton
             title="Let's Go"
             icon={'\u270D\uFE0F'}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.push('/(auth)/onboarding')}
           />
           <HandwrittenText variant="handSm" color={colors.textTertiary}>
             3-day free trial. No cap.

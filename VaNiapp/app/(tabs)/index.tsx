@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { useRouter } from 'expo-router';
 
 import { DotGridBackground } from '../../src/components/ui/DotGridBackground';
 import { JournalCard } from '../../src/components/ui/JournalCard';
-import { StickyNote } from '../../src/components/ui/StickyNote';
 import { HandwrittenText } from '../../src/components/ui/HandwrittenText';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Typography, Spacing, BorderRadius } from '../../src/constants/theme';
@@ -15,6 +15,9 @@ import { SUBJECT_META } from '../../src/constants/subjects';
 export default function DashboardScreen() {
   const { colors, mode, toggle } = useTheme();
   const user = useSelector((state: RootState) => state.auth.user);
+  const chapterHistory = useSelector((state: RootState) => state.practice.chapterHistory);
+  const practiceHistory = useSelector((state: RootState) => state.practice.practiceHistory);
+  const router = useRouter();
 
   const displaySubjects = useMemo(() => {
     const ids = user?.selectedSubjects ?? ['physics', 'chemistry', 'botany', 'zoology'];
@@ -25,6 +28,19 @@ export default function DashboardScreen() {
   }, [user?.selectedSubjects]);
 
   const greeting = user?.name ? `Hey, ${user.name}` : 'Study Board';
+  const totalTests = chapterHistory.length + practiceHistory.length;
+
+  const avgScore = useMemo(() => {
+    if (chapterHistory.length === 0) return null;
+    const totalPct = chapterHistory.reduce((sum, s) => {
+      const pct =
+        s.totalQuestions > 0 && s.correctCount !== null
+          ? (s.correctCount / s.totalQuestions) * 100
+          : 0;
+      return sum + pct;
+    }, 0);
+    return Math.round(totalPct / chapterHistory.length);
+  }, [chapterHistory]);
 
   return (
     <DotGridBackground>
@@ -36,9 +52,7 @@ export default function DashboardScreen() {
               <Text style={[Typography.label, { color: colors.textTertiary }]}>
                 {user?.exam ?? 'NEET'} PREP
               </Text>
-              <Text style={[Typography.h1, { color: colors.text, marginTop: 4 }]}>
-                {greeting}
-              </Text>
+              <Text style={[Typography.h1, { color: colors.text, marginTop: 4 }]}>{greeting}</Text>
             </View>
             <Pressable onPress={toggle} style={styles.themeToggle}>
               <Text style={styles.themeEmoji}>
@@ -47,56 +61,120 @@ export default function DashboardScreen() {
             </Pressable>
           </View>
 
-          {/* Exam Modes */}
-          <StickyNote color="yellow" rotation={-1} delay={100}>
-            <View style={styles.trialRow}>
-              <View>
-                <HandwrittenText variant="handSm">Choose a mode</HandwrittenText>
-                <Text style={[Typography.body, { color: colors.text }]}>Chapter Exam or Practice Exam</Text>
+          {/* Exam Mode Cards */}
+          <View style={styles.modeSection}>
+            <HandwrittenText variant="hand" rotation={-1}>
+              Pick a mode
+            </HandwrittenText>
+            <View style={styles.modeCards}>
+              {/* Chapter Exam */}
+              <Pressable
+                style={styles.modeCardWrap}
+                onPress={() => router.push('/(exam)/subject-select')}
+              >
+                <JournalCard delay={100} style={styles.modeCard}>
+                  <Text style={styles.modeIcon}>{'\uD83D\uDCD6'}</Text>
+                  <Text style={[Typography.h3, { color: colors.text, textAlign: 'center' }]}>
+                    Chapter{'\n'}Exam
+                  </Text>
+                  <Text
+                    style={[
+                      Typography.bodySm,
+                      { color: colors.textSecondary, textAlign: 'center', marginTop: 6 },
+                    ]}
+                  >
+                    25 Qs per chapter{'\n'}Instant feedback
+                  </Text>
+                </JournalCard>
+              </Pressable>
+
+              {/* Practice Exam (coming next) */}
+              <View style={styles.modeCardWrap}>
+                <JournalCard delay={200} style={styles.modeCard}>
+                  <Text style={styles.modeIcon}>{'\uD83C\uDFAF'}</Text>
+                  <Text style={[Typography.h3, { color: colors.text, textAlign: 'center' }]}>
+                    Practice{'\n'}Exam
+                  </Text>
+                  <Text
+                    style={[
+                      Typography.bodySm,
+                      { color: colors.textSecondary, textAlign: 'center', marginTop: 6 },
+                    ]}
+                  >
+                    200 Qs, 3h 20m{'\n'}NEET format
+                  </Text>
+                  <View style={[styles.comingSoon, { backgroundColor: colors.warning + '20' }]}>
+                    <Text style={[styles.comingSoonText, { color: colors.warning }]}>
+                      COMING NEXT
+                    </Text>
+                  </View>
+                </JournalCard>
               </View>
             </View>
-          </StickyNote>
+          </View>
 
-          {/* Subject Grid */}
+          {/* Subject Grid — quick jump to chapter-select */}
           <View style={styles.sectionHeader}>
-            <HandwrittenText variant="hand" rotation={-1}>Pick a subject</HandwrittenText>
+            <HandwrittenText variant="hand" rotation={-1}>
+              Your subjects
+            </HandwrittenText>
           </View>
 
           <View style={styles.subjectGrid}>
             {displaySubjects.map((subject, idx) => (
-              <JournalCard key={subject.id} delay={200 + idx * 80} style={styles.subjectCard}>
-                <View style={[styles.subjectIconBg, { backgroundColor: subject.color + '20' }]}>
-                  <Text style={styles.subjectEmoji}>{subject.emoji}</Text>
-                </View>
-                <Text
-                  style={[Typography.h3, { color: colors.text, marginTop: Spacing.sm, textAlign: 'center' }]}
-                  numberOfLines={1}
-                >
-                  {subject.name}
-                </Text>
-              </JournalCard>
+              <Pressable
+                key={subject.id}
+                style={styles.subjectWrap}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(exam)/chapter-select',
+                    params: { subjectId: subject.id },
+                  })
+                }
+              >
+                <JournalCard delay={300 + idx * 80} style={styles.subjectCard}>
+                  <View style={[styles.subjectIconBg, { backgroundColor: subject.color + '20' }]}>
+                    <Text style={styles.subjectEmoji}>{subject.emoji}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      Typography.h3,
+                      { color: colors.text, marginTop: Spacing.sm, textAlign: 'center' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {subject.name}
+                  </Text>
+                </JournalCard>
+              </Pressable>
             ))}
           </View>
 
           {/* Quick Stats */}
           <JournalCard rotation={0.5} delay={600}>
-            <Text style={[Typography.label, { color: colors.textTertiary, marginBottom: Spacing.md }]}>
+            <Text
+              style={[Typography.label, { color: colors.textTertiary, marginBottom: Spacing.md }]}
+            >
               QUICK STATS
             </Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={[Typography.h1, { color: colors.primary }]}>0</Text>
+                <Text style={[Typography.h1, { color: colors.primary }]}>{totalTests}</Text>
                 <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>Tests</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.surfaceBorder }]} />
               <View style={styles.statItem}>
-                <Text style={[Typography.h1, { color: colors.correct }]}>--%</Text>
+                <Text style={[Typography.h1, { color: colors.correct }]}>
+                  {avgScore !== null ? `${avgScore}%` : '--%'}
+                </Text>
                 <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>Avg Score</Text>
               </View>
               <View style={[styles.statDivider, { backgroundColor: colors.surfaceBorder }]} />
               <View style={styles.statItem}>
-                <Text style={[Typography.h1, { color: colors.warning }]}>0m</Text>
-                <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>Time</Text>
+                <Text style={[Typography.h1, { color: colors.warning }]}>
+                  {chapterHistory.length}
+                </Text>
+                <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>Chapters</Text>
               </View>
             </View>
           </JournalCard>
@@ -126,21 +204,34 @@ const styles = StyleSheet.create({
   themeEmoji: {
     fontSize: 24,
   },
-  trialRow: {
+  modeSection: {
+    gap: Spacing.md,
+  },
+  modeCards: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  modeCardWrap: {
+    flex: 1,
+  },
+  modeCard: {
     alignItems: 'center',
+    paddingVertical: Spacing.xl,
   },
-  trialBadge: {
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
+  modeIcon: {
+    fontSize: 36,
+    marginBottom: Spacing.sm,
   },
-  trialBadgeText: {
+  comingSoon: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  comingSoonText: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    fontSize: 14,
-    color: '#78716C',
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
   sectionHeader: {
     marginTop: Spacing.sm,
@@ -150,8 +241,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.md,
   },
-  subjectCard: {
+  subjectWrap: {
     width: '47%',
+  },
+  subjectCard: {
     alignItems: 'center',
   },
   subjectIconBg: {

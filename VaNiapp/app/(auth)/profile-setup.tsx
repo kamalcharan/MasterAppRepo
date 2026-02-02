@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,15 +18,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Typography, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../src/store/slices/authSlice';
-import {
-  ExamType,
-  Language,
-  SubjectId,
-  SubjectCategory,
-  CUET_SUBJECTS,
-  CUET_MAX_SUBJECTS,
-  NEET_SUBJECT_IDS,
-} from '../../src/types';
+import { ExamType, Language, NEET_SUBJECT_IDS } from '../../src/types';
 
 const exams: { id: ExamType; label: string; emoji: string; desc: string }[] = [
   { id: 'NEET', label: 'NEET', emoji: '\uD83E\uDE7A', desc: '4 subjects (fixed)' },
@@ -39,14 +31,6 @@ const languages: { id: Language; label: string; native: string }[] = [
   { id: 'te', label: 'Telugu', native: '\u0C24\u0C46\u0C32\u0C41\u0C17\u0C41' },
 ];
 
-const CATEGORY_ORDER: SubjectCategory[] = [
-  'Science',
-  'Commerce',
-  'Arts / Humanities',
-  'Other',
-  'General Test',
-];
-
 export default function ProfileSetupScreen() {
   const { colors, mode } = useTheme();
   const router = useRouter();
@@ -55,61 +39,47 @@ export default function ProfileSetupScreen() {
   const [name, setName] = useState('');
   const [exam, setExam] = useState<ExamType | null>(null);
   const [language, setLanguage] = useState<Language>('en');
-  const [cuetSubjects, setCuetSubjects] = useState<SubjectId[]>([]);
 
-  const needsSubjectPicker = exam === 'CUET' || exam === 'BOTH';
-
-  const groupedSubjects = useMemo(() => {
-    const groups: Record<string, typeof CUET_SUBJECTS> = {};
-    for (const cat of CATEGORY_ORDER) {
-      const items = CUET_SUBJECTS.filter((s) => s.category === cat);
-      if (items.length > 0) groups[cat] = items;
-    }
-    return groups;
-  }, []);
-
-  const toggleCuetSubject = (id: SubjectId) => {
-    setCuetSubjects((prev) => {
-      if (prev.includes(id)) return prev.filter((s) => s !== id);
-      if (prev.length >= CUET_MAX_SUBJECTS) return prev;
-      return [...prev, id];
-    });
-  };
-
-  const getSelectedSubjects = (): SubjectId[] => {
-    if (exam === 'NEET') return [...NEET_SUBJECT_IDS];
-    if (exam === 'CUET') return cuetSubjects;
-    if (exam === 'BOTH') {
-      const combined = new Set<SubjectId>([...NEET_SUBJECT_IDS, ...cuetSubjects]);
-      return Array.from(combined);
-    }
-    return [];
-  };
-
-  const canContinue =
-    name.trim().length >= 2 &&
-    exam !== null &&
-    (!needsSubjectPicker || cuetSubjects.length >= 1);
+  const canContinue = name.trim().length >= 2 && exam !== null;
 
   const handleContinue = () => {
     if (!canContinue || !exam) return;
 
-    dispatch(
-      setUser({
-        id: '',
-        name: name.trim(),
-        email: '',
-        exam,
-        language,
-        selectedSubjects: getSelectedSubjects(),
-        trialStartDate: new Date().toISOString(),
-        questionsUsed: 0,
-        trialQuestionsLimit: 25,
-        trialDaysLimit: 3,
-      })
-    );
-
-    router.replace('/(auth)/trial-welcome');
+    if (exam === 'NEET') {
+      // NEET has fixed subjects — save and go to trial
+      dispatch(
+        setUser({
+          id: '',
+          name: name.trim(),
+          email: '',
+          exam,
+          language,
+          selectedSubjects: [...NEET_SUBJECT_IDS],
+          trialStartDate: new Date().toISOString(),
+          questionsUsed: 0,
+          trialQuestionsLimit: 25,
+          trialDaysLimit: 3,
+        })
+      );
+      router.replace('/(auth)/trial-welcome');
+    } else {
+      // CUET or Both — need subject picker, save partial profile first
+      dispatch(
+        setUser({
+          id: '',
+          name: name.trim(),
+          email: '',
+          exam,
+          language,
+          selectedSubjects: exam === 'BOTH' ? [...NEET_SUBJECT_IDS] : [],
+          trialStartDate: new Date().toISOString(),
+          questionsUsed: 0,
+          trialQuestionsLimit: 25,
+          trialDaysLimit: 3,
+        })
+      );
+      router.push('/(auth)/subject-picker');
+    }
   };
 
   const selectedColor = (active: boolean) => ({
@@ -166,10 +136,7 @@ export default function ProfileSetupScreen() {
                 {exams.map((e) => (
                   <Pressable
                     key={e.id}
-                    onPress={() => {
-                      setExam(e.id);
-                      if (e.id === 'NEET') setCuetSubjects([]);
-                    }}
+                    onPress={() => setExam(e.id)}
                     style={[styles.examChip, selectedColor(exam === e.id)]}
                   >
                     <Text style={styles.chipEmoji}>{e.emoji}</Text>
@@ -204,84 +171,8 @@ export default function ProfileSetupScreen() {
             </View>
           </JournalCard>
 
-          {/* CUET Subject Picker */}
-          {needsSubjectPicker && (
-            <JournalCard rotation={-0.2} delay={300}>
-              <View style={styles.section}>
-                <View style={styles.subjectHeader}>
-                  <Text style={[Typography.h3, { color: colors.text }]}>
-                    Pick your CUET subjects
-                  </Text>
-                  <Text
-                    style={[
-                      Typography.bodySm,
-                      {
-                        color: cuetSubjects.length >= CUET_MAX_SUBJECTS
-                          ? colors.warning
-                          : colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {cuetSubjects.length}/{CUET_MAX_SUBJECTS} selected
-                  </Text>
-                </View>
-
-                {CATEGORY_ORDER.map((category) => {
-                  const items = groupedSubjects[category];
-                  if (!items) return null;
-                  return (
-                    <View key={category} style={styles.categoryBlock}>
-                      <Text style={[Typography.label, { color: colors.textTertiary }]}>
-                        {category.toUpperCase()}
-                      </Text>
-                      <View style={styles.subjectChips}>
-                        {items.map((subj) => {
-                          const isSelected = cuetSubjects.includes(subj.id);
-                          const isDisabled =
-                            !isSelected && cuetSubjects.length >= CUET_MAX_SUBJECTS;
-                          return (
-                            <Pressable
-                              key={subj.id}
-                              onPress={() => !isDisabled && toggleCuetSubject(subj.id)}
-                              style={[
-                                styles.subjectChip,
-                                selectedColor(isSelected),
-                                isDisabled && { opacity: 0.4 },
-                              ]}
-                            >
-                              <Text style={styles.subjectChipEmoji}>{subj.emoji}</Text>
-                              <Text
-                                style={[
-                                  Typography.bodySm,
-                                  {
-                                    color: selectedTextColor(isSelected),
-                                    fontFamily: 'PlusJakartaSans_600SemiBold',
-                                  },
-                                ]}
-                              >
-                                {subj.name}
-                              </Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  );
-                })}
-
-                {exam === 'BOTH' && (
-                  <StickyNote color="yellow" rotation={0.5}>
-                    <HandwrittenText variant="handSm">
-                      NEET subjects (Physics, Chemistry, Botany, Zoology) are auto-included!
-                    </HandwrittenText>
-                  </StickyNote>
-                )}
-              </View>
-            </JournalCard>
-          )}
-
           {/* Language */}
-          <StickyNote color="teal" rotation={-1} delay={needsSubjectPicker ? 400 : 300}>
+          <StickyNote color="teal" rotation={-1} delay={300}>
             <View style={styles.section}>
               <Text style={[Typography.h3, { color: colors.text }]}>
                 Preferred language?
@@ -315,8 +206,8 @@ export default function ProfileSetupScreen() {
 
           <View style={styles.actions}>
             <PuffyButton
-              title="Continue"
-              icon={'\u2728'}
+              title={exam === 'NEET' ? 'Continue' : exam ? 'Pick Subjects' : 'Continue'}
+              icon={exam && exam !== 'NEET' ? '\uD83D\uDCDA' : '\u2728'}
               onPress={handleContinue}
               disabled={!canContinue}
             />
@@ -346,11 +237,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.md,
-  },
-  subjectHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   input: {
     fontFamily: 'PlusJakartaSans_400Regular',
@@ -387,26 +273,6 @@ const styles = StyleSheet.create({
   },
   chipEmoji: {
     fontSize: 24,
-  },
-  categoryBlock: {
-    gap: Spacing.sm,
-  },
-  subjectChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  subjectChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-  },
-  subjectChipEmoji: {
-    fontSize: 16,
   },
   actions: {
     alignItems: 'center',

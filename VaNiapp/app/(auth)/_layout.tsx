@@ -17,6 +17,7 @@ export default function AuthLayout() {
       <Stack.Screen name="sign-up" />
       <Stack.Screen name="sign-in" />
       <Stack.Screen name="profile-setup" />
+      <Stack.Screen name="subject-picker" />
       <Stack.Screen name="trial-welcome" options={{ animation: 'fade' }} />
     </Stack>
   );

@@ -88,8 +88,11 @@ export default function DashboardScreen() {
                 </JournalCard>
               </Pressable>
 
-              {/* Practice Exam (coming next) */}
-              <View style={styles.modeCardWrap}>
+              {/* Practice Exam */}
+              <Pressable
+                style={styles.modeCardWrap}
+                onPress={() => router.push('/(exam)/practice-start')}
+              >
                 <JournalCard delay={200} style={styles.modeCard}>
                   <Text style={styles.modeIcon}>{'\uD83C\uDFAF'}</Text>
                   <Text style={[Typography.h3, { color: colors.text, textAlign: 'center' }]}>
@@ -103,13 +106,8 @@ export default function DashboardScreen() {
                   >
                     200 Qs, 3h 20m{'\n'}NEET format
                   </Text>
-                  <View style={[styles.comingSoon, { backgroundColor: colors.warning + '20' }]}>
-                    <Text style={[styles.comingSoonText, { color: colors.warning }]}>
-                      COMING NEXT
-                    </Text>
-                  </View>
                 </JournalCard>
-              </View>
+              </Pressable>
             </View>
           </View>
 
@@ -221,17 +219,6 @@ const styles = StyleSheet.create({
   modeIcon: {
     fontSize: 36,
     marginBottom: Spacing.sm,
-  },
-  comingSoon: {
-    marginTop: Spacing.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  comingSoonText: {
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    fontSize: 10,
-    letterSpacing: 0.5,
   },
   sectionHeader: {
     marginTop: Spacing.sm,

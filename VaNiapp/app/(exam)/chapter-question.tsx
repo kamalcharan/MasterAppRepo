@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -15,21 +14,16 @@ import * as Haptics from 'expo-haptics';
 import { DotGridBackground } from '../../src/components/ui/DotGridBackground';
 import { JournalCard } from '../../src/components/ui/JournalCard';
 import { HandwrittenText } from '../../src/components/ui/HandwrittenText';
-import { PuffyButton } from '../../src/components/ui/PuffyButton';
 import { useTheme } from '../../src/hooks/useTheme';
-import { Typography, Spacing, BorderRadius, Shadows } from '../../src/constants/theme';
+import { Typography, Spacing, BorderRadius } from '../../src/constants/theme';
 import { RootState } from '../../src/store';
 import { getQuestionsByChapter } from '../../src/data/questions';
 import { getChapterById } from '../../src/data/chapters';
 import { SUBJECT_META } from '../../src/constants/subjects';
-import { Question, NeetSubjectId, ChapterExamSession, UserAnswer } from '../../src/types';
+import { NeetSubjectId, ChapterExamSession, UserAnswer } from '../../src/types';
 import { startChapterExam, updateAnswer, completeChapterExam } from '../../src/store/slices/practiceSlice';
 
-const DIFFICULTY_COLORS = {
-  easy: '#22C55E',
-  medium: '#F59E0B',
-  hard: '#EF4444',
-};
+const DIFF_COLORS = { easy: '#22C55E', medium: '#F59E0B', hard: '#EF4444' };
 
 export default function ChapterQuestionScreen() {
   const { colors, mode } = useTheme();
@@ -48,16 +42,16 @@ export default function ChapterQuestionScreen() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showElimination, setShowElimination] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const question = questions[currentIndex];
   const isCorrect = selectedOptionId === question?.correctOptionId;
-  const correctCount = Object.entries(answers).filter(
-    ([qId, optId]) => {
+
+  const correctCount = useMemo(() => {
+    return Object.entries(answers).filter(([qId, optId]) => {
       const q = questions.find((qq) => qq.id === qId);
       return q && optId === q.correctOptionId;
-    }
-  ).length;
+    }).length;
+  }, [answers, questions]);
 
   // Initialize session on first render
   useMemo(() => {
@@ -76,40 +70,39 @@ export default function ChapterQuestionScreen() {
     dispatch(startChapterExam(session));
   }, [chapter?.id]);
 
-  const handleSelectOption = useCallback(
-    (optionId: string) => {
-      if (showFeedback || !question) return;
-      setSelectedOptionId(optionId);
-      setShowFeedback(true);
+  const handleSelectOption = (optionId: string) => {
+    if (showFeedback || !question) return;
+    setSelectedOptionId(optionId);
+    setShowFeedback(true);
 
-      const correct = optionId === question.correctOptionId;
-      Haptics.impactAsync(
-        correct ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Heavy
-      );
+    const correct = optionId === question.correctOptionId;
+    Haptics.impactAsync(
+      correct ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Heavy
+    );
 
-      setAnswers((prev) => ({ ...prev, [question.id]: optionId }));
+    setAnswers((prev) => ({ ...prev, [question.id]: optionId }));
 
-      const answer: UserAnswer = {
+    dispatch(
+      updateAnswer({
         questionId: question.id,
         selectedOptionId: optionId,
         isMarked: false,
         eliminatedOptionIds: [],
         timeSpentMs: 0,
-      };
-      dispatch(updateAnswer(answer));
-    },
-    [showFeedback, question, dispatch]
-  );
+      })
+    );
+  };
 
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
+    if (!question) return;
+
     if (currentIndex >= questions.length - 1) {
-      // Last question — go to results
-      const finalCorrect = Object.entries({ ...answers, [question!.id]: selectedOptionId! }).filter(
-        ([qId, optId]) => {
-          const q = questions.find((qq) => qq.id === qId);
-          return q && optId === q.correctOptionId;
-        }
-      ).length;
+      // Last question — compute final score and go to results
+      const allAnswers = { ...answers, [question.id]: selectedOptionId! };
+      const finalCorrect = Object.entries(allAnswers).filter(([qId, optId]) => {
+        const q = questions.find((qq) => qq.id === qId);
+        return q && optId === q.correctOptionId;
+      }).length;
 
       dispatch(
         completeChapterExam({
@@ -120,78 +113,61 @@ export default function ChapterQuestionScreen() {
 
       router.replace({
         pathname: '/(exam)/chapter-results',
-        params: { chapterId, correct: String(finalCorrect), total: String(questions.length) },
+        params: { chapterId: chapterId!, correct: String(finalCorrect), total: String(questions.length) },
       });
       return;
     }
 
-    // Animate transition
-    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
-      setCurrentIndex((prev) => prev + 1);
-      setSelectedOptionId(null);
-      setShowFeedback(false);
-      setShowElimination(false);
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    });
-  }, [currentIndex, questions.length, answers, selectedOptionId, question, chapterId, fadeAnim, dispatch, router]);
+    // Move to next question directly (no animation that blocks)
+    setCurrentIndex((prev) => prev + 1);
+    setSelectedOptionId(null);
+    setShowFeedback(false);
+    setShowElimination(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
 
   if (!question || !chapter || !subjectMeta) return null;
 
   const getOptionStyle = (optId: string) => {
     if (!showFeedback) {
-      return {
-        bg: colors.surface,
-        border: colors.surfaceBorder,
-        textColor: colors.text,
-      };
+      return { bg: colors.surface, border: colors.surfaceBorder, text: colors.text };
     }
     if (optId === question.correctOptionId) {
-      return {
-        bg: '#22C55E18',
-        border: '#22C55E',
-        textColor: '#16A34A',
-      };
+      return { bg: '#22C55E18', border: '#22C55E', text: '#16A34A' };
     }
     if (optId === selectedOptionId && !isCorrect) {
-      return {
-        bg: '#EF444418',
-        border: '#EF4444',
-        textColor: '#DC2626',
-      };
+      return { bg: '#EF444418', border: '#EF4444', text: '#DC2626' };
     }
-    return {
-      bg: colors.surface,
-      border: colors.surfaceBorder,
-      textColor: colors.textTertiary,
-    };
+    return { bg: colors.surface, border: colors.surfaceBorder, text: colors.textTertiary };
   };
+
+  const isLast = currentIndex >= questions.length - 1;
 
   return (
     <DotGridBackground>
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         {/* Top Bar */}
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <View style={[styles.topBar, { borderBottomColor: colors.surfaceBorder }]}>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
             <Text style={[styles.backArrow, { color: colors.text }]}>{'<'}</Text>
           </Pressable>
           <View style={styles.topCenter}>
-            <Text style={[Typography.label, { color: colors.textSecondary }]}>
+            <Text style={[Typography.bodySm, { color: colors.textSecondary }]} numberOfLines={1}>
               {subjectMeta.emoji} {language === 'te' ? chapter.nameTe : chapter.name}
             </Text>
           </View>
-          <View style={[styles.progressBadge, { backgroundColor: subjectMeta.color + '20' }]}>
-            <Text style={[styles.progressText, { color: subjectMeta.color }]}>
+          <View style={[styles.counterBadge, { backgroundColor: subjectMeta.color + '20' }]}>
+            <Text style={[styles.counterText, { color: subjectMeta.color }]}>
               {currentIndex + 1}/{questions.length}
             </Text>
           </View>
         </View>
 
         {/* Progress Bar */}
-        <View style={[styles.progressBarBg, { backgroundColor: colors.surfaceBorder }]}>
+        <View style={[styles.progressBg, { backgroundColor: colors.surfaceBorder }]}>
           <View
             style={[
-              styles.progressBarFill,
+              styles.progressFill,
               {
                 backgroundColor: subjectMeta.color,
                 width: `${((currentIndex + (showFeedback ? 1 : 0)) / questions.length) * 100}%`,
@@ -200,139 +176,144 @@ export default function ChapterQuestionScreen() {
           />
         </View>
 
+        {/* Scrollable Question Content */}
         <ScrollView
           ref={scrollRef}
-          style={styles.scrollArea}
+          style={styles.scroll}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <Animated.View style={{ opacity: fadeAnim }}>
-            {/* Difficulty Badge */}
-            <View style={styles.diffRow}>
-              <View style={[styles.diffBadge, { backgroundColor: DIFFICULTY_COLORS[question.difficulty] + '20' }]}>
-                <Text style={[styles.diffText, { color: DIFFICULTY_COLORS[question.difficulty] }]}>
-                  {question.difficulty.toUpperCase()}
-                </Text>
-              </View>
-            </View>
+          {/* Difficulty */}
+          <View style={[styles.diffBadge, { backgroundColor: DIFF_COLORS[question.difficulty] + '20' }]}>
+            <Text style={[styles.diffText, { color: DIFF_COLORS[question.difficulty] }]}>
+              {question.difficulty.toUpperCase()}
+            </Text>
+          </View>
 
-            {/* Question */}
-            <JournalCard delay={0} style={styles.questionCard}>
-              <Text style={[Typography.h3, { color: colors.text, lineHeight: 26 }]}>
-                {language === 'te' ? question.textTe : question.text}
-              </Text>
-            </JournalCard>
+          {/* Question Text */}
+          <View style={[styles.questionBox, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
+            <Text style={[Typography.h3, { color: colors.text, lineHeight: 26 }]}>
+              {language === 'te' ? question.textTe : question.text}
+            </Text>
+          </View>
 
-            {/* Options */}
-            <View style={styles.optionsList}>
-              {question.options.map((opt, idx) => {
-                const optStyle = getOptionStyle(opt.id);
-                const label = String.fromCharCode(65 + idx); // A, B, C, D
-
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => handleSelectOption(opt.id)}
-                    disabled={showFeedback}
-                    style={[
-                      styles.optionRow,
-                      {
-                        backgroundColor: optStyle.bg,
-                        borderColor: optStyle.border,
-                        borderWidth: showFeedback && (opt.id === question.correctOptionId || opt.id === selectedOptionId) ? 2 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.optionLabel, { backgroundColor: optStyle.border + '30' }]}>
-                      <Text style={[styles.optionLabelText, { color: optStyle.textColor }]}>{label}</Text>
-                    </View>
-                    <Text style={[Typography.body, { color: optStyle.textColor, flex: 1 }]}>
-                      {language === 'te' ? opt.textTe : opt.text}
-                    </Text>
-                    {showFeedback && opt.id === question.correctOptionId && (
-                      <Text style={styles.checkMark}>{'✓'}</Text>
-                    )}
-                    {showFeedback && opt.id === selectedOptionId && !isCorrect && (
-                      <Text style={styles.crossMark}>{'✗'}</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Feedback Section */}
-            {showFeedback && (
-              <View style={styles.feedbackSection}>
-                {/* Correct/Wrong Banner */}
-                <View
+          {/* Options */}
+          <View style={styles.optionsList}>
+            {question.options.map((opt, idx) => {
+              const os = getOptionStyle(opt.id);
+              const label = String.fromCharCode(65 + idx);
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => handleSelectOption(opt.id)}
+                  disabled={showFeedback}
                   style={[
-                    styles.resultBanner,
-                    { backgroundColor: isCorrect ? '#22C55E18' : '#EF444418' },
+                    styles.optionRow,
+                    {
+                      backgroundColor: os.bg,
+                      borderColor: os.border,
+                      borderWidth: showFeedback && (opt.id === question.correctOptionId || opt.id === selectedOptionId) ? 2 : 1,
+                    },
                   ]}
                 >
-                  <Text style={[Typography.h3, { color: isCorrect ? '#16A34A' : '#DC2626' }]}>
-                    {isCorrect ? 'Correct!' : 'Incorrect'}
+                  <View style={[styles.optLabel, { backgroundColor: os.border + '30' }]}>
+                    <Text style={[styles.optLabelText, { color: os.text }]}>{label}</Text>
+                  </View>
+                  <Text style={[Typography.body, { color: os.text, flex: 1 }]}>
+                    {language === 'te' ? opt.textTe : opt.text}
                   </Text>
-                  <Text style={[Typography.bodySm, { color: isCorrect ? '#16A34A' : '#DC2626', marginTop: 2 }]}>
-                    {isCorrect
-                      ? 'Great job!'
-                      : `Answer: ${String.fromCharCode(65 + question.options.findIndex((o) => o.id === question.correctOptionId))}`}
-                  </Text>
-                </View>
-
-                {/* Explanation */}
-                <JournalCard delay={0} style={styles.explanationCard}>
-                  <HandwrittenText variant="handSm">Explanation</HandwrittenText>
-                  <Text style={[Typography.body, { color: colors.text, marginTop: Spacing.sm, lineHeight: 22 }]}>
-                    {language === 'te' ? question.explanationTe : question.explanation}
-                  </Text>
-                </JournalCard>
-
-                {/* Elimination Toggle */}
-                <Pressable
-                  onPress={() => setShowElimination((prev) => !prev)}
-                  style={[styles.elimToggle, { borderColor: colors.surfaceBorder }]}
-                >
-                  <Text style={[Typography.bodySm, { color: colors.primary }]}>
-                    {showElimination ? 'Hide' : 'Show'} Elimination Technique
-                  </Text>
+                  {showFeedback && opt.id === question.correctOptionId && (
+                    <Text style={{ fontSize: 18, color: '#16A34A' }}>{'\u2713'}</Text>
+                  )}
+                  {showFeedback && opt.id === selectedOptionId && !isCorrect && (
+                    <Text style={{ fontSize: 18, color: '#DC2626' }}>{'\u2717'}</Text>
+                  )}
                 </Pressable>
+              );
+            })}
+          </View>
 
-                {showElimination && (
-                  <JournalCard delay={0} style={styles.elimCard}>
-                    <HandwrittenText variant="handSm">Elimination Technique</HandwrittenText>
-                    <Text style={[Typography.body, { color: colors.text, marginTop: Spacing.sm, lineHeight: 22 }]}>
-                      {language === 'te' ? question.eliminationTechniqueTe : question.eliminationTechnique}
-                    </Text>
-                  </JournalCard>
+          {/* Feedback Section */}
+          {showFeedback && (
+            <View style={styles.feedbackArea}>
+              {/* Correct / Wrong banner */}
+              <View style={[styles.banner, { backgroundColor: isCorrect ? '#22C55E18' : '#EF444418' }]}>
+                <Text style={[Typography.h3, { color: isCorrect ? '#16A34A' : '#DC2626' }]}>
+                  {isCorrect ? 'Correct!' : 'Incorrect'}
+                </Text>
+                {!isCorrect && (
+                  <Text style={[Typography.bodySm, { color: '#DC2626', marginTop: 2 }]}>
+                    Correct answer:{' '}
+                    {String.fromCharCode(65 + question.options.findIndex((o) => o.id === question.correctOptionId))}
+                  </Text>
                 )}
               </View>
-            )}
-          </Animated.View>
+
+              {/* Explanation */}
+              <JournalCard delay={0}>
+                <HandwrittenText variant="handSm">Explanation</HandwrittenText>
+                <Text style={[Typography.body, { color: colors.text, marginTop: Spacing.sm, lineHeight: 22 }]}>
+                  {language === 'te' ? question.explanationTe : question.explanation}
+                </Text>
+              </JournalCard>
+
+              {/* Elimination Technique toggle */}
+              <Pressable
+                onPress={() => setShowElimination((p) => !p)}
+                style={[styles.elimBtn, { borderColor: colors.surfaceBorder }]}
+              >
+                <Text style={[Typography.bodySm, { color: colors.primary }]}>
+                  {showElimination ? 'Hide' : 'Show'} Elimination Technique
+                </Text>
+              </Pressable>
+
+              {showElimination && (
+                <JournalCard delay={0}>
+                  <HandwrittenText variant="handSm">Elimination Technique</HandwrittenText>
+                  <Text style={[Typography.body, { color: colors.text, marginTop: Spacing.sm, lineHeight: 22 }]}>
+                    {language === 'te' ? question.eliminationTechniqueTe : question.eliminationTechnique}
+                  </Text>
+                </JournalCard>
+              )}
+            </View>
+          )}
         </ScrollView>
 
-        {/* Bottom Action */}
-        {showFeedback && (
-          <View style={styles.bottomBar}>
-            <View style={styles.scoreCounter}>
-              <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>
-                Score: {correctCount + (isCorrect ? 1 : 0)}/{currentIndex + 1}
-              </Text>
-            </View>
-            <PuffyButton
-              title={currentIndex >= questions.length - 1 ? 'See Results' : 'Next Question'}
+        {/* Fixed Bottom Bar — always visible after answering */}
+        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.surfaceBorder }]}>
+          <Text style={[Typography.bodySm, { color: colors.textSecondary }]}>
+            {showFeedback
+              ? `Score: ${correctCount + (isCorrect ? 1 : 0)}/${currentIndex + 1}`
+              : `Question ${currentIndex + 1} of ${questions.length}`}
+          </Text>
+
+          {showFeedback ? (
+            <Pressable
               onPress={handleNext}
-              icon={currentIndex >= questions.length - 1 ? undefined : '>'}
-            />
-          </View>
-        )}
+              style={[styles.nextBtn, { backgroundColor: mode === 'dark' ? '#FFF' : '#0F172A' }]}
+            >
+              <Text
+                style={[
+                  styles.nextBtnText,
+                  { color: mode === 'dark' ? '#0F172A' : '#FFF' },
+                ]}
+              >
+                {isLast ? 'See Results' : 'Next Question  >'}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={[Typography.bodySm, { color: colors.textTertiary }]}>
+              Tap an option to answer
+            </Text>
+          )}
+        </View>
       </SafeAreaView>
     </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
   },
   topBar: {
@@ -340,6 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
   },
   backBtn: {
     width: 36,
@@ -355,48 +337,50 @@ const styles = StyleSheet.create({
   topCenter: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: Spacing.sm,
   },
-  progressBadge: {
+  counterBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: BorderRadius.md,
   },
-  progressText: {
+  counterText: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 13,
   },
-  progressBarBg: {
+  progressBg: {
     height: 4,
     marginHorizontal: Spacing.lg,
     borderRadius: 2,
-    marginBottom: Spacing.sm,
+    marginVertical: 4,
   },
-  progressBarFill: {
+  progressFill: {
     height: 4,
     borderRadius: 2,
   },
-  scrollArea: {
+  scroll: {
     flex: 1,
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: 120,
-  },
-  diffRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
+    paddingBottom: 30,
   },
   diffBadge: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.md,
   },
   diffText: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 11,
     letterSpacing: 0.5,
   },
-  questionCard: {
+  questionBox: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
     marginBottom: Spacing.lg,
   },
   optionsList: {
@@ -409,59 +393,48 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     gap: Spacing.md,
   },
-  optionLabel: {
+  optLabel: {
     width: 32,
     height: 32,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  optionLabelText: {
+  optLabelText: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 14,
   },
-  checkMark: {
-    fontSize: 20,
-    color: '#16A34A',
-    fontWeight: 'bold',
-  },
-  crossMark: {
-    fontSize: 20,
-    color: '#DC2626',
-    fontWeight: 'bold',
-  },
-  feedbackSection: {
+  feedbackArea: {
     marginTop: Spacing.xl,
     gap: Spacing.md,
   },
-  resultBanner: {
+  banner: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
   },
-  explanationCard: {},
-  elimToggle: {
+  elimBtn: {
     alignSelf: 'center',
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
   },
-  elimCard: {},
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
   },
-  scoreCounter: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
+  nextBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: BorderRadius.xl,
+  },
+  nextBtnText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 15,
   },
 });

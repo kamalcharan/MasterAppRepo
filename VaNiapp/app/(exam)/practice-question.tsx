@@ -325,7 +325,7 @@ export default function PracticeQuestionScreen() {
 
   return (
     <DotGridBackground>
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Timer Bar */}
         <View style={[styles.timerBar, { borderBottomColor: colors.surfaceBorder }]}>
           <Pressable onPress={() => handleSubmit()} style={styles.submitBtnSmall}>
@@ -547,13 +547,14 @@ export default function PracticeQuestionScreen() {
         </ScrollView>
 
         {/* Bottom Nav */}
-        <View style={[styles.bottomNav, { borderTopColor: colors.surfaceBorder }]}>
+        <View style={[styles.bottomNav, { borderTopColor: colors.surfaceBorder, backgroundColor: colors.background }]}>
           <Pressable
             onPress={handlePrev}
             disabled={currentIndex === 0}
+            hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
             style={[styles.navBtn, { opacity: currentIndex === 0 ? 0.3 : 1 }]}
           >
-            <Text style={[Typography.body, { color: colors.primary }]}>{'< Prev'}</Text>
+            <Text style={[styles.navBtnText, { color: colors.primary }]}>{'< Prev'}</Text>
           </Pressable>
           <Pressable onPress={() => handleSubmit()} style={styles.submitBtn}>
             <Text style={[Typography.button, { color: '#FFF' }]}>Submit Exam</Text>
@@ -561,9 +562,10 @@ export default function PracticeQuestionScreen() {
           <Pressable
             onPress={handleNext}
             disabled={currentIndex === allQuestions.length - 1}
+            hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
             style={[styles.navBtn, { opacity: currentIndex === allQuestions.length - 1 ? 0.3 : 1 }]}
           >
-            <Text style={[Typography.body, { color: colors.primary }]}>{'Next >'}</Text>
+            <Text style={[styles.navBtnText, { color: colors.primary }]}>{'Next >'}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -654,7 +656,7 @@ const styles = StyleSheet.create({
   },
   questionContent: {
     padding: Spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 30,
   },
   qHeader: {
     flexDirection: 'row',
@@ -715,13 +717,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
   },
   navBtn: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  navBtnText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 15,
   },
   submitBtn: {
     backgroundColor: '#EF4444',

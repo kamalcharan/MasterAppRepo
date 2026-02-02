@@ -290,6 +290,7 @@ export default function ChapterQuestionScreen() {
           {showFeedback ? (
             <Pressable
               onPress={handleNext}
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
               style={[styles.nextBtn, { backgroundColor: mode === 'dark' ? '#FFF' : '#0F172A' }]}
             >
               <Text

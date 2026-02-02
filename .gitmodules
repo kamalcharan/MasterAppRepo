@@ -1,6 +1,3 @@
 [submodule "FK-New"]
 	path = FK-New
 	url = https://github.com/kamalcharan/FK-New.git
-[submodule "VaNiapp"]
-	path = VaNiapp
-	url = https://github.com/kamalcharan/VaNiapp.git
